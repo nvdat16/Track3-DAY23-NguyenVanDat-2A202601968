@@ -2,8 +2,8 @@
 
 ## 1. Team / student
 
-- Name: Not provided
-- Repo/commit: Working tree
+- Name: Nguyễn Văn Đạt
+- Repo/commit: [github](https://github.com/nvdat16/phase2-k3-4-track3-day8-langgraph-agent.git)
 - Date: 2026-08-25
 
 ## 2. Architecture
