@@ -20,14 +20,7 @@ env/
 
 # Environment
 .env
-
-# Persistence
-checkpoints.db
-checkpoints.db-wal
-checkpoints.db-shm
-outputs/*.sqlite
-outputs/*.sqlite-wal
-outputs/*.sqlite-shm
+demo/outputs/
 
 # Testing
 .pytest_cache/

@@ -39,7 +39,7 @@ Explain how you used checkpointer, thread id, state history, or crash-resume.
 
 ## 7. Extension work
 
-Describe any extension you completed: SQLite/Postgres, time travel, fan-out/fan-in, graph diagram, tracing.
+Describe any extension you completed: PostgreSQL, time travel, fan-out/fan-in, graph diagram, tracing.
 
 ## 8. Improvement plan
 

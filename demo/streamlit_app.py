@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-from importlib.util import find_spec
 from pathlib import Path
 from typing import Any, cast
 
@@ -22,16 +21,14 @@ from langgraph_agent_lab.runner import (
     invoke_ticket,
     resume_ticket,
     run_scenario_suite,
-    verify_checkpoint_recovery,
 )
 from langgraph_agent_lab.scenarios import load_scenarios
 
-ROOT = Path(__file__).resolve().parents[1]
-SQLITE_PATH = ROOT / "outputs" / "demo_checkpoints.sqlite"
-METRICS_PATH = ROOT / "outputs" / "metrics.json"
-REPORT_PATH = ROOT / "reports" / "lab_report.md"
-SCENARIOS_PATH = ROOT / "data" / "sample" / "scenarios.jsonl"
-SQLITE_AVAILABLE = find_spec("langgraph.checkpoint.sqlite") is not None
+DEMO_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = DEMO_ROOT.parent
+METRICS_PATH = DEMO_ROOT / "outputs" / "metrics.json"
+REPORT_PATH = DEMO_ROOT / "outputs" / "lab_report.md"
+SCENARIOS_PATH = PROJECT_ROOT / "data" / "sample" / "scenarios.jsonl"
 
 SAMPLE_QUERIES = {
     "Password help": "How do I reset my password?",
@@ -115,7 +112,7 @@ def _configure_page() -> None:
 
 
 def _provider_details() -> tuple[str, str, bool]:
-    load_dotenv(ROOT / ".env")
+    load_dotenv(PROJECT_ROOT / ".env")
     configured_model = os.getenv("LLM_MODEL")
     if os.getenv("GEMINI_API_KEY"):
         return "Gemini", configured_model or "gemini-2.5-flash", True
@@ -127,12 +124,8 @@ def _provider_details() -> tuple[str, str, bool]:
 
 
 @st.cache_resource(show_spinner=False)
-def _compiled_graph(backend: str) -> CompiledStateGraph:
-    if backend == "SQLite":
-        checkpointer = build_checkpointer("sqlite", str(SQLITE_PATH))
-    else:
-        checkpointer = build_checkpointer("memory")
-    return build_graph(checkpointer)
+def _compiled_graph() -> CompiledStateGraph:
+    return build_graph(build_checkpointer("memory"))
 
 
 def _load_existing_metrics() -> MetricsReport | None:
@@ -161,7 +154,6 @@ def _event_rows(state: dict[str, Any]) -> list[dict[str, object]]:
 
 def _render_run_summary(
     graph: CompiledStateGraph,
-    backend: str,
     state: dict[str, Any],
     config: RunnableConfig,
 ) -> None:
@@ -208,12 +200,6 @@ def _render_run_summary(
             for index, snapshot in enumerate(snapshots, start=1)
         ]
         st.dataframe(snapshot_rows, use_container_width=True, hide_index=True)
-        if backend == "SQLite" and st.button("Verify recovery", use_container_width=False):
-            recovered = verify_checkpoint_recovery("sqlite", str(SQLITE_PATH), [config])
-            if recovered:
-                st.success("Recovered from a new SQLite graph instance.")
-            else:
-                st.error("Checkpoint recovery failed.")
     with state_tab:
         serializable_state = {key: value for key, value in state.items() if key != "__interrupt__"}
         st.json(serializable_state)
@@ -221,7 +207,6 @@ def _render_run_summary(
 
 def _render_agent(
     graph: CompiledStateGraph,
-    backend: str,
     provider_ready: bool,
     max_attempts: int,
     pause_risky: bool,
@@ -261,7 +246,7 @@ def _render_agent(
     config = cast(RunnableConfig | None, st.session_state.get("ticket_config"))
     if state is not None and config is not None:
         st.divider()
-        _render_run_summary(graph, backend, state, config)
+        _render_run_summary(graph, state, config)
 
 
 def _suite_rows(report: MetricsReport) -> list[dict[str, object]]:
@@ -282,7 +267,6 @@ def _suite_rows(report: MetricsReport) -> list[dict[str, object]]:
 
 def _render_scenarios(
     graph: CompiledStateGraph,
-    backend: str,
     provider_ready: bool,
 ) -> None:
     if st.button("Run lab suite", type="primary", disabled=not provider_ready):
@@ -296,18 +280,12 @@ def _render_scenarios(
             progress_text.caption(f"{completed}/{total} | {scenario_id}")
 
         with st.spinner("Running grading scenarios..."):
-            report, run_configs = run_scenario_suite(
+            report, _ = run_scenario_suite(
                 graph,
                 scenarios,
-                persistent_backend=backend == "SQLite",
+                persistent_backend=False,
                 progress=update_progress,
             )
-            if backend == "SQLite":
-                report.resume_success = verify_checkpoint_recovery(
-                    "sqlite",
-                    str(SQLITE_PATH),
-                    run_configs,
-                )
             write_metrics(report, METRICS_PATH)
             write_report(report, REPORT_PATH)
             st.session_state.suite_report = report
@@ -399,15 +377,12 @@ def main() -> None:
 
     with st.sidebar:
         st.subheader("Runtime")
-        backend_options = ["SQLite", "Memory"] if SQLITE_AVAILABLE else ["Memory"]
-        backend = st.radio("Checkpoint", backend_options, horizontal=True) or "Memory"
+        st.caption("Checkpoint: Memory (demo session)")
         max_attempts = int(st.number_input("Max attempts", min_value=1, max_value=8, value=3))
         pause_risky = st.checkbox("Pause risky actions", value=True)
         st.divider()
         st.caption(f"Provider: {provider}")
         st.caption(f"Model: {model}")
-        if not SQLITE_AVAILABLE:
-            st.warning("SQLite checkpoint extra is not installed.")
         if not provider_ready:
             st.error("LLM API key is not configured.")
         if st.button("New session", use_container_width=True):
@@ -415,14 +390,14 @@ def main() -> None:
                 st.session_state.pop(key, None)
             st.rerun()
 
-    graph = _compiled_graph(backend)
+    graph = _compiled_graph()
     agent_tab, scenarios_tab, architecture_tab, report_tab = st.tabs(
         ["Agent", "Scenarios", "Architecture", "Report"]
     )
     with agent_tab:
-        _render_agent(graph, backend, provider_ready, max_attempts, pause_risky)
+        _render_agent(graph, provider_ready, max_attempts, pause_risky)
     with scenarios_tab:
-        _render_scenarios(graph, backend, provider_ready)
+        _render_scenarios(graph, provider_ready)
     with architecture_tab:
         _render_architecture()
     with report_tab:

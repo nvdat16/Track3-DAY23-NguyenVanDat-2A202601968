@@ -83,17 +83,18 @@ actions require approval before tool execution. Exhausted failures enter dead le
 
 ## 7. Persistence and recovery evidence
 
-Each run uses a unique `thread_id` and a LangGraph checkpointer. SQLite runs use WAL mode,
-and the scenario runner reads the saved state back after invocation to verify recovery.
+Each run uses a unique `thread_id` and a PostgreSQL LangGraph checkpointer. The scenario
+runner opens a new database connection and reads saved state back by thread ID to verify
+that checkpoints survive graph reconstruction.
 
 ## 8. Extension work
 
-The SQLite extension stores graph checkpoints in a file-backed database with WAL mode.
-The recovery check rebuilds a graph with the same checkpoint database and reads state by
+The PostgreSQL extension stores graph checkpoints in the Docker Compose database. The
+recovery check rebuilds a graph with a new PostgreSQL connection and reads state by
 `thread_id`. Real LangGraph interrupts are also available through `LANGGRAPH_INTERRUPT`;
 batch grading explicitly uses mock approval so unattended runs terminate.
-The Streamlit console demonstrates single-ticket execution, approve/reject resume,
-checkpoint history and recovery, batch metrics, architecture, and report rendering.
+The separate Streamlit console demonstrates single-ticket execution, approve/reject
+resume, in-session checkpoint history, batch metrics, architecture, and report rendering.
 
 ## 9. Improvement plan
 

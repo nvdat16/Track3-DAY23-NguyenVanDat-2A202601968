@@ -1,6 +1,5 @@
 scenarios_path: data/sample/scenarios.jsonl
-# CHECKPOINTER and DATABASE_URL from .env override these local defaults.
-checkpointer: sqlite
-database_url: outputs/checkpoints.sqlite
+# DATABASE_URL is loaded from .env; credentials do not belong in YAML.
+checkpointer: postgres
 interrupt_enabled: false
 report_path: reports/lab_report.md

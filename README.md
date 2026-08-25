@@ -3,7 +3,7 @@
 Build a production-style LangGraph workflow for a support-ticket agent with state management, conditional routing, retry loops, human-in-the-loop approval, persistence, and metrics.
 
 This repository contains a complete reference workflow with LLM routing, bounded retries,
-approval gating, SQLite persistence, metrics, and report generation.
+approval gating, PostgreSQL persistence, metrics, and report generation.
 
 ---
 
@@ -124,13 +124,13 @@ The grading script will also test with scenarios you haven't seen.
 ```bash
 # Option A: conda
 conda activate ai-lab
-pip install -e '.[dev]'
+pip install -e '.[dev,postgres]'
 pip install langchain-openai  # or langchain-anthropic
 
 # Option B: venv
 python -m venv .venv
 source .venv/bin/activate
-pip install -e '.[dev]'
+pip install -e '.[dev,postgres]'
 pip install langchain-openai  # or langchain-anthropic
 
 # Configure LLM
@@ -178,7 +178,7 @@ make test  # some tests will fail until you implement TODOs
 
 ### Phase 3: Persistence (150–180 min) — worth 10 points
 
-7. **`persistence.py`** — Implement SQLite checkpointer
+7. **`persistence.py`** — Implement a PostgreSQL checkpointer
    - Show evidence: thread_id per run, state history, or crash-resume
 
 ### Phase 4: Metrics & report (180–240 min) — worth 25 points
@@ -195,7 +195,7 @@ Pick one or more:
 - **Real HITL**: `LANGGRAPH_INTERRUPT=true` with `interrupt()`
 - **Streamlit UI**: Build approval/reject interface
 - **Time travel**: `get_state_history()` replay
-- **Crash recovery**: SQLite checkpoint survives process kill
+- **Crash recovery**: PostgreSQL checkpoint survives process restart
 - **Graph diagram**: `graph.get_graph().draw_mermaid()`
 
 ---
@@ -205,7 +205,9 @@ Pick one or more:
 | Command | What it does |
 |---|---|
 | `make install` | Install project + dev dependencies |
-| `make install-postgres` | Install the core project with PostgreSQL persistence |
+| `make db-up` | Start the PostgreSQL 16 container |
+| `make db-down` | Stop the PostgreSQL container |
+| `make db-status` | Show PostgreSQL container status |
 | `make test` | Run pytest |
 | `make test-demo` | Run the separate Streamlit smoke test |
 | `make lint` | Run ruff linter |
@@ -223,23 +225,29 @@ make install-demo
 make run-demo
 ```
 
-The app lives separately in `demo/streamlit_app.py`. The console exposes the single-ticket
-graph, real approval interrupts, checkpoint history, SQLite recovery verification, batch
-scenarios, architecture, metrics, and the generated report.
+The app lives separately in `demo/streamlit_app.py` and uses an in-memory checkpointer for
+its own session. The console exposes the single-ticket graph, real approval interrupts,
+checkpoint history, batch scenarios, architecture, metrics, and the generated report.
+Demo-generated artifacts stay under `demo/outputs/` and do not overwrite PostgreSQL
+metrics or the submitted report.
 
 ### PostgreSQL persistence
 
-PostgreSQL belongs to the core persistence layer and does not depend on Streamlit:
+PostgreSQL belongs to the core persistence layer and runs through Docker Compose:
 
 ```bash
-make install-postgres
+make install
+make db-up
 ```
+
+The Compose service maps host port `5433` to PostgreSQL's container port `5432` and uses
+a named volume, so checkpoints survive container recreation and `make db-down`.
 
 Then configure `.env` without putting credentials in `configs/lab.yaml`:
 
 ```dotenv
 CHECKPOINTER=postgres
-DATABASE_URL=postgresql://user:password@localhost:5432/langgraph_lab
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/langgraph_lab
 ```
 
 ---
@@ -272,6 +280,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/langgraph_lab
 
 4. **Graph wiring**: Every path must end at `finalize → END`. Missing this means the graph hangs for some scenarios.
 
-5. **SqliteSaver API**: In `langgraph-checkpoint-sqlite` 3.x, use `SqliteSaver(conn=sqlite3.connect(...))` not `SqliteSaver.from_conn_string()`.
+5. **PostgreSQL connection**: Start the container with `make db-up` and verify that
+   `DATABASE_URL` in `.env` matches the credentials in `docker-compose.yml`.
 
 6. **API key not set**: If you get "No LLM API key found", check your `.env` file and make sure it's loaded (use `python-dotenv` or export manually).

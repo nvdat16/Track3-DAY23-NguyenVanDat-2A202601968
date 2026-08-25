@@ -55,8 +55,10 @@ route (max retry)  -> retry -> dead_letter -> finalize -> END
 
 ### Phase 3: Persistence (150–180 min)
 
-7. **`persistence.py`**: Implement SQLite checkpointer:
-   - `"sqlite"` → `SqliteSaver` with `sqlite3.connect()` and WAL mode
+7. **`persistence.py`**: Implement PostgreSQL checkpointer:
+   - `"postgres"` → `PostgresSaver` with a `psycopg` connection
+   - Start the provided service with `make db-up`
+   - Read `DATABASE_URL` from `.env`
    - Show evidence: thread_id per run, state history, or crash-resume
 
 ### Phase 4: Metrics, report, tests (180–240 min)
@@ -72,7 +74,7 @@ Pick one or more:
 - **Real HITL**: Set `LANGGRAPH_INTERRUPT=true`, use `interrupt()` in approval_node
 - **Streamlit UI**: Build approval/reject interface with interrupt/resume
 - **Time travel**: Use `get_state_history()` to replay from earlier checkpoint
-- **Crash recovery**: Show SQLite checkpoint survives process kill + restart
+- **Crash recovery**: Show PostgreSQL checkpoint survives process restart
 - **Parallel fan-out**: Use `Send()` to run two tools concurrently
 - **Graph diagram**: Export Mermaid diagram via `graph.get_graph().draw_mermaid()`
 

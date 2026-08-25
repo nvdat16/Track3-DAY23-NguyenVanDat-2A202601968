@@ -1,13 +1,19 @@
-.PHONY: install install-postgres install-demo test test-demo lint typecheck typecheck-demo run-scenarios run-demo grade-local clean
+.PHONY: install install-demo db-up db-down db-status test test-demo lint typecheck typecheck-demo run-scenarios run-demo grade-local clean
 
 install:
-	python -m pip install -e '.[dev,sqlite]'
-
-install-postgres:
 	python -m pip install -e '.[dev,postgres]'
 
 install-demo:
-	python -m pip install -e '.[dev,openai,sqlite,demo]'
+	python -m pip install -e '.[dev,openai,demo]'
+
+db-up:
+	docker compose up -d postgres
+
+db-down:
+	docker compose down
+
+db-status:
+	docker compose ps postgres
 
 test:
 	pytest

@@ -106,7 +106,7 @@ def verify_checkpoint_recovery(
     run_configs: list[RunnableConfig],
 ) -> bool:
     """Rebuild the graph and verify saved threads through a new checkpointer instance."""
-    if kind not in {"sqlite", "postgres"} or not run_configs:
+    if kind != "postgres" or not run_configs:
         return False
 
     from .graph import build_graph

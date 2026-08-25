@@ -32,7 +32,7 @@ def run_scenarios(
     checkpointer_kind, database_url = resolve_checkpointer_config(cfg)
     checkpointer = build_checkpointer(checkpointer_kind, database_url)
     graph = build_graph(checkpointer=checkpointer)
-    persistent_backend = checkpointer_kind in {"sqlite", "postgres"}
+    persistent_backend = checkpointer_kind == "postgres"
     report, run_configs = run_scenario_suite(graph, scenarios, persistent_backend)
     if persistent_backend:
         report.resume_success = verify_checkpoint_recovery(

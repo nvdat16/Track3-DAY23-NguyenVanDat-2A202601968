@@ -36,19 +36,19 @@ actions require approval before tool execution. Exhausted failures enter dead le
 | Average nodes visited | 6.43 |
 | Total retries | 3 |
 | Total approval events | 2 |
-| Checkpoint recovery verified | no |
+| Checkpoint recovery verified | yes |
 
 ## 5. Scenario results
 
 | Scenario | Expected | Actual | Success | Retries | Approvals | Latency ms | Errors |
 |---|---|---|---:|---:|---:|---:|---|
-| S01_simple | simple | simple | yes | 0 | 0 | 4686 | - |
-| S02_tool | tool | tool | yes | 0 | 0 | 2767 | - |
-| S03_missing | missing_info | missing_info | yes | 0 | 0 | 917 | - |
-| S04_risky | risky | risky | yes | 0 | 1 | 3068 | - |
-| S05_error | error | error | yes | 2 | 0 | 4915 | Transient failure recorded before attempt 1; Transient failure recorded before attempt 2 |
-| S06_delete | risky | risky | yes | 0 | 1 | 2765 | - |
-| S07_dead_letter | error | error | yes | 1 | 0 | 920 | Transient failure recorded before attempt 1 |
+| S01_simple | simple | simple | yes | 0 | 0 | 5492 | - |
+| S02_tool | tool | tool | yes | 0 | 0 | 5424 | - |
+| S03_missing | missing_info | missing_info | yes | 0 | 0 | 915 | - |
+| S04_risky | risky | risky | yes | 0 | 1 | 7052 | - |
+| S05_error | error | error | yes | 2 | 0 | 5113 | Transient failure recorded before attempt 1; Transient failure recorded before attempt 2 |
+| S06_delete | risky | risky | yes | 0 | 1 | 7981 | - |
+| S07_dead_letter | error | error | yes | 1 | 0 | 741 | Transient failure recorded before attempt 1 |
 
 ## 6. Failure analysis
 
@@ -62,17 +62,18 @@ actions require approval before tool execution. Exhausted failures enter dead le
 
 ## 7. Persistence and recovery evidence
 
-Each run uses a unique `thread_id` and a LangGraph checkpointer. SQLite runs use WAL mode,
-and the scenario runner reads the saved state back after invocation to verify recovery.
+Each run uses a unique `thread_id` and a PostgreSQL LangGraph checkpointer. The scenario
+runner opens a new database connection and reads saved state back by thread ID to verify
+that checkpoints survive graph reconstruction.
 
 ## 8. Extension work
 
-The SQLite extension stores graph checkpoints in a file-backed database with WAL mode.
-The recovery check rebuilds a graph with the same checkpoint database and reads state by
+The PostgreSQL extension stores graph checkpoints in the Docker Compose database. The
+recovery check rebuilds a graph with a new PostgreSQL connection and reads state by
 `thread_id`. Real LangGraph interrupts are also available through `LANGGRAPH_INTERRUPT`;
 batch grading explicitly uses mock approval so unattended runs terminate.
-The Streamlit console demonstrates single-ticket execution, approve/reject resume,
-checkpoint history and recovery, batch metrics, architecture, and report rendering.
+The separate Streamlit console demonstrates single-ticket execution, approve/reject
+resume, in-session checkpoint history, batch metrics, architecture, and report rendering.
 
 ## 9. Improvement plan
 
