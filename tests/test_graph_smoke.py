@@ -1,7 +1,4 @@
-"""Graph smoke tests.
-
-These tests verify end-to-end graph execution. They will fail with NotImplementedError
-until you implement nodes, routing, and graph wiring.
+"""Graph smoke tests using the configured provider.
 
 Note: These tests require a configured LLM (OPENAI_API_KEY or ANTHROPIC_API_KEY)
 because classify_node and answer_node use real LLM calls.
@@ -11,6 +8,13 @@ import importlib.util
 import os
 
 import pytest
+from dotenv import load_dotenv
+
+from langgraph_agent_lab.graph import build_graph
+from langgraph_agent_lab.persistence import build_checkpointer
+from langgraph_agent_lab.state import Route, Scenario, initial_state
+
+load_dotenv()
 
 pytestmark = [
     pytest.mark.skipif(
@@ -22,10 +26,6 @@ pytestmark = [
         reason="No LLM API key configured (set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)",
     ),
 ]
-
-from langgraph_agent_lab.graph import build_graph
-from langgraph_agent_lab.persistence import build_checkpointer
-from langgraph_agent_lab.state import Route, Scenario, initial_state
 
 
 @pytest.mark.parametrize(
@@ -42,6 +42,7 @@ def test_graph_runs_and_routes_correctly(query, expected_route):
     graph = build_graph(checkpointer=build_checkpointer("memory"))
     scenario = Scenario(id="smoke", query=query, expected_route=Route(expected_route))
     state = initial_state(scenario)
+    state["interrupt_enabled"] = False
     result = graph.invoke(state, config={"configurable": {"thread_id": state["thread_id"]}})
     assert result["route"] == expected_route
     assert result.get("final_answer") or result.get("pending_question")
@@ -60,6 +61,7 @@ def test_graph_terminates_all_routes():
     for query, route in queries:
         scenario = Scenario(id=f"term-{route.value}", query=query, expected_route=route)
         state = initial_state(scenario)
+        state["interrupt_enabled"] = False
         result = graph.invoke(state, config={"configurable": {"thread_id": state["thread_id"]}})
         events = result.get("events", [])
         finalize_events = [e for e in events if e.get("node") == "finalize"]

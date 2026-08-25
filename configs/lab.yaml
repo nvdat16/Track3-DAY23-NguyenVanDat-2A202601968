@@ -1,3 +1,6 @@
 scenarios_path: data/sample/scenarios.jsonl
-checkpointer: memory
+# CHECKPOINTER and DATABASE_URL from .env override these local defaults.
+checkpointer: sqlite
+database_url: outputs/checkpoints.sqlite
+interrupt_enabled: false
 report_path: reports/lab_report.md

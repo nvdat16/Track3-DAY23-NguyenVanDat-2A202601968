@@ -1,37 +1,10 @@
-"""Report generation helper."""
-
-from __future__ import annotations
-
-import os
-from datetime import date
-from pathlib import Path
-
-from .metrics import MetricsReport
-
-
-def render_report(metrics: MetricsReport) -> str:
-    """Render a complete lab report from metrics data.
-
-    Return: formatted markdown string
-    """
-    student_name = os.getenv("STUDENT_NAME", "Not provided")
-    commit = os.getenv("GIT_COMMIT", "Working tree")
-    scenario_rows = []
-    for item in metrics.scenario_metrics:
-        errors = "; ".join(item.errors).replace("|", "\\|") or "-"
-        scenario_rows.append(
-            f"| {item.scenario_id} | {item.expected_route} | {item.actual_route or '-'} "
-            f"| {'yes' if item.success else 'no'} | {item.retry_count} "
-            f"| {item.interrupt_count} | {item.latency_ms} | {errors} |"
-        )
-
-    return f"""# Day 08 Lab Report
+# Day 08 Lab Report
 
 ## 1. Team / student
 
-- Name: {student_name}
-- Repo/commit: {commit}
-- Date: {date.today().isoformat()}
+- Name: Not provided
+- Repo/commit: Working tree
+- Date: 2026-08-25
 
 ## 2. Architecture
 
@@ -58,18 +31,24 @@ actions require approval before tool execution. Exhausted failures enter dead le
 
 | Metric | Value |
 |---|---:|
-| Total scenarios | {metrics.total_scenarios} |
-| Success rate | {metrics.success_rate:.2%} |
-| Average nodes visited | {metrics.avg_nodes_visited:.2f} |
-| Total retries | {metrics.total_retries} |
-| Total approval events | {metrics.total_interrupts} |
-| Checkpoint recovery verified | {'yes' if metrics.resume_success else 'no'} |
+| Total scenarios | 7 |
+| Success rate | 100.00% |
+| Average nodes visited | 6.43 |
+| Total retries | 3 |
+| Total approval events | 2 |
+| Checkpoint recovery verified | no |
 
 ## 5. Scenario results
 
 | Scenario | Expected | Actual | Success | Retries | Approvals | Latency ms | Errors |
 |---|---|---|---:|---:|---:|---:|---|
-{chr(10).join(scenario_rows)}
+| S01_simple | simple | simple | yes | 0 | 0 | 4686 | - |
+| S02_tool | tool | tool | yes | 0 | 0 | 2767 | - |
+| S03_missing | missing_info | missing_info | yes | 0 | 0 | 917 | - |
+| S04_risky | risky | risky | yes | 0 | 1 | 3068 | - |
+| S05_error | error | error | yes | 2 | 0 | 4915 | Transient failure recorded before attempt 1; Transient failure recorded before attempt 2 |
+| S06_delete | risky | risky | yes | 0 | 1 | 2765 | - |
+| S07_dead_letter | error | error | yes | 1 | 0 | 920 | Transient failure recorded before attempt 1 |
 
 ## 6. Failure analysis
 
@@ -100,11 +79,3 @@ checkpoint history and recovery, batch metrics, architecture, and report renderi
 Production work should replace the mock tool and mock reviewer with authenticated APIs,
 resume real HITL interrupts from an operator UI, redact sensitive event data, and add
 tracing plus provider-level timeout and rate-limit handling.
-"""
-
-
-def write_report(metrics: MetricsReport, output_path: str | Path) -> None:
-    """Write the rendered report to a file."""
-    path = Path(output_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_report(metrics), encoding="utf-8")

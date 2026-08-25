@@ -2,7 +2,8 @@
 
 Build a production-style LangGraph workflow for a support-ticket agent with state management, conditional routing, retry loops, human-in-the-loop approval, persistence, and metrics.
 
-This is a **starter skeleton**. All node implementations, routing logic, and graph wiring are left as `TODO(student)` — you must build them from scratch.
+This repository contains a complete reference workflow with LLM routing, bounded retries,
+approval gating, SQLite persistence, metrics, and report generation.
 
 ---
 
@@ -204,12 +205,42 @@ Pick one or more:
 | Command | What it does |
 |---|---|
 | `make install` | Install project + dev dependencies |
+| `make install-postgres` | Install the core project with PostgreSQL persistence |
 | `make test` | Run pytest |
+| `make test-demo` | Run the separate Streamlit smoke test |
 | `make lint` | Run ruff linter |
 | `make typecheck` | Run mypy type checker |
+| `make typecheck-demo` | Type-check the separate Streamlit app |
 | `make run-scenarios` | Execute all scenarios → `outputs/metrics.json` |
+| `make run-demo` | Start the Streamlit operations console |
 | `make grade-local` | Validate metrics.json schema |
 | `make clean` | Remove caches and generated files |
+
+### Streamlit demo
+
+```bash
+make install-demo
+make run-demo
+```
+
+The app lives separately in `demo/streamlit_app.py`. The console exposes the single-ticket
+graph, real approval interrupts, checkpoint history, SQLite recovery verification, batch
+scenarios, architecture, metrics, and the generated report.
+
+### PostgreSQL persistence
+
+PostgreSQL belongs to the core persistence layer and does not depend on Streamlit:
+
+```bash
+make install-postgres
+```
+
+Then configure `.env` without putting credentials in `configs/lab.yaml`:
+
+```dotenv
+CHECKPOINTER=postgres
+DATABASE_URL=postgresql://user:password@localhost:5432/langgraph_lab
+```
 
 ---
 
